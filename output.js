@@ -1,4 +1,4 @@
-//Mon Aug 05 2024 14:26:27 GMT+0000 (Coordinated Universal Time)
+//Mon Aug 05 2024 15:52:09 GMT+0000 (Coordinated Universal Time)
 //Base:https://github.com/echo094/decode-js
 //Modify:https://github.com/smallfawn/decode_action
 /**
@@ -5172,8 +5172,72 @@ function a0c() {
   };
   return a0c();
 }
-
-// prettier-ignore
+/** ---------------------------------固定不动区域----------------------------------------- */
+//prettier-ignore
+async function sendMsg(a, e) {
+  a && ($.isNode() ? await notify.sendNotify($.name, a) : $.msg($.name, $.title || "", a, e));
+}
+function DoubleLog(o) {
+  o && ($.log(`${o}`), $.notifyMsg.push(`${o}`));
+}
+;
+async function checkEnv() {
+  try {
+    if (!userCookie?.length) throw new Error("no available accounts found");
+    $.log(`\n[INFO] 检测到 ${userCookie?.length ?? 0} 个账号\n`), $.userList.push(...userCookie.map(o => new UserInfo(o)).filter(Boolean));
+  } catch (o) {
+    throw o;
+  }
+}
+function debug(g, e = "debug") {
+  "true" === $.is_debug && ($.log(`\n-----------${e}------------\n`), $.log("string" == typeof g ? g : $.toStr(g) || `debug error => t=${g}`), $.log(`\n-----------${e}------------\n`));
+}
+//From xream's ObjectKeys2LowerCase
+function ObjectKeys2LowerCase(obj) {
+  return !obj ? {} : Object.fromEntries(Object.entries(obj).map(([k, v]) => [k.toLowerCase(), v]));
+}
+;
+//From sliverkiss's Request
+async function Request(t) {
+  "string" == typeof t && (t = {
+    url: t
+  });
+  try {
+    if (!t?.url) throw new Error("[URL][ERROR] \u7F3A\u5C11 url \u53C2\u6570");
+    let {
+      url: o,
+      type: e,
+      headers: r = {},
+      body: s,
+      params: a,
+      dataType: n = "form",
+      resultType: u = "data"
+    } = t;
+    const p = e ? e?.toLowerCase() : "body" in t ? "post" : "get",
+      c = o.concat("post" === p ? "?" + $.queryStr(a) : ""),
+      i = t.timeout ? $.isSurge() ? t.timeout / 1000 : t.timeout : 10000;
+    "json" === n && (r["Content-Type"] = "application/json;charset=UTF-8");
+    const y = "string" == typeof s ? s : s && "form" == n ? $.queryStr(s) : $.toStr(s),
+      l = {
+        ...t,
+        ...(t?.opts ? t.opts : {}),
+        url: c,
+        headers: r,
+        ...("post" === p && {
+          body: y
+        }),
+        ...("get" === p && a && {
+          params: a
+        }),
+        timeout: i
+      },
+      m = $.http[p.toLowerCase()](l).then(t => "data" == u ? $.toObj(t.body) || t.body : $.toObj(t) || t).catch(t => $.log(`[${p.toUpperCase()}][ERROR] ${t}\n`));
+    return Promise.race([new Promise((t, o) => setTimeout(() => o("\u5F53\u524D\u8BF7\u6C42\u5DF2\u8D85\u65F6"), i)), m]);
+  } catch (t) {
+    console.log(`[${p.toUpperCase()}][ERROR] ${t}\n`);
+  }
+}
+//From chavyleung's Env.js
 function Env(t, e) {
   class s {
     constructor(t) {
@@ -5184,11 +5248,17 @@ function Env(t, e) {
         url: t
       } : t;
       let s = this.get;
-      return "POST" === e && (s = this.post), new Promise((e, i) => {
+      "POST" === e && (s = this.post);
+      const i = new Promise((e, i) => {
         s.call(this, t, (t, s, o) => {
           t ? i(t) : e(s);
         });
       });
+      return t.timeout ? ((t, e = 1000) => Promise.race([t, new Promise((t, s) => {
+        setTimeout(() => {
+          s(new Error("\u8BF7\u6C42\u8D85\u65F6"));
+        }, e);
+      })]))(i, t.timeout) : i;
     }
     get(t) {
       return this.send.call(this.env, t);
@@ -5285,6 +5355,7 @@ function Env(t, e) {
               "X-Key": r,
               Accept: "*/*"
             },
+            policy: "DIRECT",
             timeout: o
           };
         this.post(n, (t, e, i) => s(i));
